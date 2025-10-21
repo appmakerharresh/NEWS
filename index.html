@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tamil Nadu News - ISDA</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --accent:#0b3d91; /* deep blue like The Hindu */
+      --muted:#6b6b6b;
+      --max-width:1100px;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family: "Merriweather", serif;
+      margin:0;
+      color:#111;
+      background:#fff;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    header{
+      border-bottom:1px solid #e6e6e6;
+      padding:18px 16px;
+      text-align:center;
+      position:sticky;
+      top:0;
+      background:#fff;
+      z-index:20;
+    }
+    .brand{
+      font-size:28px;
+      color:var(--accent);
+      letter-spacing:0.4px;
+      font-weight:700;
+    }
+    .tagline{
+      font-family: "Roboto", sans-serif;
+      font-size:13px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+
+    .container{
+      max-width:var(--max-width);
+      margin:22px auto;
+      padding:0 16px;
+    }
+
+    /* Top featured */
+    .featured{
+      display:grid;
+      grid-template-columns: 1fr 340px;
+      gap:18px;
+      margin-bottom:18px;
+    }
+    .lead{
+      background:#fff;
+      border-radius:4px;
+      overflow:hidden;
+    }
+    .lead img{
+      width:100%;
+      height:420px;
+      object-fit:cover;
+      display:block;
+    }
+    .lead .lead-body{
+      padding:16px 18px;
+    }
+    .lead h1{
+      margin:0 0 10px 0;
+      font-size:26px;
+      line-height:1.18;
+      font-weight:700;
+    }
+    .lead p{
+      margin:0;
+      color:var(--muted);
+      font-family:"Roboto",sans-serif;
+      font-size:15px;
+    }
+
+    /* Sidebar list */
+    .side-list{
+      border-left:1px solid #f0f0f0;
+      padding-left:18px;
+    }
+    .side-item{
+      margin-bottom:14px;
+    }
+    .side-item a{
+      text-decoration:none;
+      color:#111;
+      font-weight:600;
+      font-size:15px;
+    }
+    .side-item small{display:block;color:var(--muted);margin-top:4px;font-family:"Roboto",sans-serif;font-weight:400}
+
+    /* Articles grid */
+    .articles{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap:18px;
+    }
+    .card{
+      display:flex;
+      gap:12px;
+      padding:12px;
+      border-top:1px solid #f2f2f2;
+      align-items:flex-start;
+    }
+    .card img{
+      width:160px;
+      height:100px;
+      object-fit:cover;
+      border-radius:4px;
+      flex-shrink:0;
+    }
+    .card h3{
+      margin:0;
+      font-size:17px;
+      line-height:1.2;
+    }
+    .card p{
+      margin:6px 0 0 0;
+      color:var(--muted);
+      font-family:"Roboto",sans-serif;
+      font-size:13px;
+    }
+
+    footer{
+      max-width:var(--max-width);
+      margin:28px auto;
+      padding:12px 16px;
+      color:var(--muted);
+      font-family:"Roboto",sans-serif;
+      font-size:13px;
+    }
+
+    /* responsive */
+    @media (max-width:980px){
+      .featured{grid-template-columns:1fr}
+      .lead img{height:300px}
+      .articles{grid-template-columns:1fr}
+      .card img{width:120px;height:80px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Tamil Nadu News</div>
+    <div class="tagline">English news/div>
+  </header>
+
+  <main class="container">
+    <section class="featured" id="featured-region">
+      <!-- Lead article + sidebar (filled by JS) -->
+      <div class="lead" id="lead-article">
+        <!-- populated -->
+      </div>
+
+      <aside class="side-list" id="side-list">
+        <!-- populated -->
+      </aside>
+    </section>
+
+    <section>
+      <div class="articles" id="articles-list">
+        <!-- article cards -->
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    &copy; <span id="year"></span> Tamil Nadu News · Data from NewsAPI 
+  </footer>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbx3p6KNQuq1WIECOT3402giyQCWC0JvOxGrv3DAOBHtJWuAoaLzrQrkaOpvsKmu4M8-/exec"; // <<-- REPLACE with your GAS web app URL
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function fmtDate(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString(undefined, { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+      } catch { return ""; }
+    }
+
+    async function loadNews() {
+      try {
+        const res = await fetch(GAS_URL);
+        const json = await res.json();
+        if (json.error) {
+          showError("News API error: " + (json.message || JSON.stringify(json)));
+          return;
+        }
+        const articles = json.articles || [];
+
+        if (!articles.length) {
+          showError("No articles found.");
+          return;
+        }
+
+        // Lead article = first article with image if possible
+        const lead = articles.find(a => a.urlToImage) || articles[0];
+        renderLead(lead);
+
+        // Sidebar: next 6 short headlines
+        const sidebar = articles.slice(1, 8);
+        renderSidebar(sidebar);
+
+        // Articles grid: rest
+        const rest = articles.slice(8);
+        renderArticles(rest);
+
+      } catch (err) {
+        console.error(err);
+        showError("Failed to load news. Check console.");
+      }
+    }
+
+    function renderLead(a) {
+      const container = document.getElementById("lead-article");
+      container.innerHTML = `
+        <img src="${a.urlToImage || 'https://via.placeholder.com/1200x628?text=No+Image'}" alt="">
+        <div class="lead-body">
+          <h1><a href="${a.url}" target="_blank" style="text-decoration:none;color:inherit;">${escapeHtml(a.title)}</a></h1>
+          <p>${escapeHtml(a.description || '')}</p>
+          <small style="display:block;margin-top:8px;color:var(--muted);font-family:Roboto, sans-serif;">
+            ${a.source && a.source.name ? escapeHtml(a.source.name) + ' · ' : ''}${fmtDate(a.publishedAt)}
+          </small>
+        </div>
+      `;
+    }
+
+    function renderSidebar(list) {
+      const el = document.getElementById("side-list");
+      el.innerHTML = "";
+      list.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "side-item";
+        div.innerHTML = `
+          <a href="${item.url}" target="_blank">${escapeHtml(item.title)}</a>
+          <small>${item.source && item.source.name ? escapeHtml(item.source.name) + ' · ' : ''}${fmtDate(item.publishedAt)}</small>
+        `;
+        el.appendChild(div);
+      });
+    }
+
+    function renderArticles(list) {
+      const el = document.getElementById("articles-list");
+      el.innerHTML = "";
+      list.forEach(a => {
+        const node = document.createElement("article");
+        node.className = "card";
+        node.innerHTML = `
+          <img src="${a.urlToImage || 'https://via.placeholder.com/320x200?text=No+Image'}" alt="">
+          <div>
+            <h3><a href="${a.url}" target="_blank" style="text-decoration:none;color:inherit">${escapeHtml(a.title)}</a></h3>
+            <p>${escapeHtml(a.description || '')}</p>
+            <small style="color:var(--muted);font-family:Roboto, sans-serif">${a.source && a.source.name ? escapeHtml(a.source.name) + ' · ' : ''}${fmtDate(a.publishedAt)}</small>
+          </div>
+        `;
+        el.appendChild(node);
+      });
+    }
+
+    function showError(msg) {
+      document.querySelector('.container').innerHTML = `<p style="color:red;text-align:center">${escapeHtml(msg)}</p>`;
+    }
+
+    // basic HTML escaper
+    function escapeHtml(str){
+      if(!str) return "";
+      return String(str).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
+    }
+
+    loadNews();
+
+    // optional: refresh every 10 minutes
+    setInterval(loadNews, 600000);
+  </script>
+</body>
+</html>
